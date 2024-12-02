@@ -147,9 +147,10 @@ def index():
     if current_user.role == 'admin':
         users = User.query.all()
         return render_template('index.html', users=users)
+    elif current_user.role == 'user':
+        return render_template('user_profile.html')
     else:
         return redirect(url_for('update_profile'))
-    
 
 
 
@@ -363,7 +364,7 @@ def login():
 
 # Configuración de Twilio
 TWILIO_ACCOUNT_SID = 'ACac0e9cca0354e194ec3c4666573e5ad9' #no me eja subir mis credenciales asi q falta rellenar
-TWILIO_AUTH_TOKEN = '8d0ec99e1d4776b20c3456866ff745bc' #igual aqui
+TWILIO_AUTH_TOKEN = '995a3d8b3402e058c84b773d006dcd68' #igual aqui
 #TWILIO_WHATSAPP_NUMBER = '+14155238886'  # Formato: 'whatsapp:+14155238886'
 TWILIO_WHATSAPP_NUMBER = '+14155238886'  # Formato: 'whatsapp:+14155238886'
 
@@ -480,7 +481,7 @@ def admin_login():
         })
     
 # Definición del umbral de similitud
-SIMILARITY_THRESHOLD = 0.96
+SIMILARITY_THRESHOLD = 0.948
 
 # Definición del modelo VerificationLog (si es necesario)
 class VerificationLog(db.Model):

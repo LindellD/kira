@@ -203,20 +203,18 @@
             <div class="user-avatar">
                 <canvas id="user_mesh_canvas"></canvas>
             </div>
-            <h2 class="user-name">{{ user.username }}</h2>
-            <p class="user-role">{{ user.role }}</p>
+            
+            
         </div>
         <ul class="menu">
             <li><a href="{{ url_for('index') }}">Inicio</a></li>
-            {% if 'configuracion_avanzada' in user.permissions %}
+            
             <li><a href="#">Configuración</a></li>
-            {% endif %}
-            {% if 'ver_alarmas' in user.permissions %}
+            
             <li><a href="#">Alarmas</a></li>
-            {% endif %}
-            {% if 'modificar_notificaciones' in user.permissions %}
+          
             <li><a href="#">Notificaciones</a></li>
-            {% endif %}
+            
             <li><a href="{{ url_for('logout') }}">Cerrar Sesión</a></li>
         </ul>
     </div>
@@ -224,7 +222,7 @@
     <div class="main-content">
         <div class="top-bar">
             <button class="menu-toggle">☰</button>
-            <h2>Bienvenido, {{ user.username }}</h2>
+            <h2>Bienvenido</h2>
         </div>
 
         <div class="content-area">
@@ -232,12 +230,9 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <h3>Rol</h3>
-                    <p>{{ user.role }}</p>
+                    
                 </div>
-                <div class="stat-card">
-                    <h3>Último Acceso</h3>
-                    <p>{{ user.last_login.strftime('%d/%m/%Y %H:%M') if user.last_login else 'No disponible' }}</p>
-                </div>
+              
                 <div class="stat-card">
                     <h3>Estado</h3>
                     <p>Activo</p>
@@ -245,12 +240,7 @@
             </div>
 
             <div class="permissions-list">
-                <h3>Mis Permisos</h3>
-                <ul>
-                    {% for permission in user.permissions %}
-                    <li>{{ permission }}</li>
-                    {% endfor %}
-                </ul>
+               
             </div>
         </div>
     </div>
@@ -265,37 +255,7 @@
         const userMeshCanvas = document.getElementById('user_mesh_canvas');
         const ctx = userMeshCanvas.getContext('2d');
         
-        // Asumiendo que la malla facial está almacenada en user.face_mesh
-        function renderUserMesh() {
-            if ('{{ user.face_mesh }}') {
-                try {
-                    const meshData = JSON.parse('{{ user.face_mesh | tojson | safe }}');
-                    // Configura el tamaño del canvas
-                    userMeshCanvas.width = 100;
-                    userMeshCanvas.height = 100;
-                    
-                    // Dibuja la malla facial
-                    ctx.clearRect(0, 0, userMeshCanvas.width, userMeshCanvas.height);
-                    ctx.strokeStyle = '#30FF30';
-                    ctx.lineWidth = 1;
-
-                    for (let i = 0; i < meshData.length; i++) {
-                        const point = meshData[i];
-                        ctx.beginPath();
-                        ctx.arc(
-                            point.x * userMeshCanvas.width,
-                            point.y * userMeshCanvas.height,
-                            1,
-                            0,
-                            2 * Math.PI
-                        );
-                        ctx.stroke();
-                    }
-                } catch (error) {
-                    console.error('Error al renderizar la malla facial:', error);
-                }
-            }
-        }
+        
 
         // Llamar a la función cuando se carga la página
         window.addEventListener('load', renderUserMesh);

@@ -27,7 +27,28 @@
             background-color: rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
         }
+
+        .flash-messages {
+            color: #ff3333;
+            margin: 10px 0;
+            text-align: center;
+            display: none;
+        }
+        #input_video, #output_canvas {
+            width: 640px;
+            height: 480px;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .face-recognition {
+            position: relative;
+            width: 640px;
+            height: 480px;
+        } 
     </style>
+    <audio id="errorSound" src="{{ url_for('static', filename='sounds/error.mp3') }}" preload="auto"></audio>
 </head>
 <body>
     <div class="container">
@@ -63,7 +84,8 @@
                     <a href="#" class="forgot-password">Olvidé mi contraseña</a>
                 </div>
                 <button type="button" onclick="startFaceVerification()">Iniciar Sesión</button>
-                <button id="capture" style="margin-top: 20px;">Verificar Identidad</button>
+                <!-- <button id="capture" style="margin-top: 20px;">Verificar Identidad</button>-->
+                <div id="errorMessage" class="flash-messages"></div>
                 <div id="message" class="flash-messages"></div>
             </div>
         </div>
@@ -74,40 +96,58 @@
         const videoElement = document.getElementById('input_video');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
-        const captureButton = document.getElementById('capture');
+        // const captureButton = document.getElementById('capture');
         const messageDiv = document.getElementById('message');
+        const errorMessageDiv = document.getElementById('errorMessage');
         const faceRecognitionSection = document.getElementById('faceRecognitionSection');
 
         function startFaceVerification() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
 
-    fetch('{{ url_for("login") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Check if the user has granted camera permissions
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(initializeFaceMesh)
-                .catch(error => {
-                    console.error('Error accessing camera:', error);
-                    messageDiv.textContent = 'Permiso de cámara denegado. Por favor, conceda el permiso e intente de nuevo.';
-                });
-        } else {
-            messageDiv.textContent = "Credenciales incorrectas";
+            fetch('{{ url_for("login") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.require_facial) {
+                        navigator.mediaDevices.getUserMedia({ video: true })
+                            .then(initializeFaceMesh)
+                            .catch(error => {
+                                console.error('Error accessing camera:', error);
+                                messageDiv.textContent = 'Permiso de cámara denegado. Por favor, conceda el permiso e intente de nuevo.';
+                                messageDiv.style.display = 'block';
+                                const errorSound = document.getElementById('errorSound');
+                                errorSound.play();
+                            });
+                    } else {
+                        window.location.href = '/';
+                    }
+                } else {
+                    // Reproducir sonido de error
+                    const errorSound = document.getElementById('errorSound');
+                    errorSound.play();
+                    
+                    // Mostrar mensaje de error
+                    errorMessageDiv.textContent = data.message;
+                    errorMessageDiv.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                errorMessageDiv.textContent = 'Error en el proceso de inicio de sesión.';
+                errorMessageDiv.style.display = 'block';
+                
+                // Reproducir sonido de error también en caso de error de red
+                const errorSound = document.getElementById('errorSound');
+                errorSound.play();
+            });
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        messageDiv.textContent = "Error de conexión";
-    });
-}
 
         function initializeFaceMesh() {
             const faceMesh = new FaceMesh({
@@ -125,6 +165,11 @@
 
             faceMesh.onResults(onResults);
 
+            videoElement.width = 640;
+            videoElement.height = 480;
+            canvasElement.width = 640;
+            canvasElement.height = 480;
+
             const camera = new Camera(videoElement, {
                 onFrame: async () => {
                     await faceMesh.send({image: videoElement});
@@ -134,7 +179,77 @@
             });
 
             camera.start();
+            startAutoVerification();
+    }
+
+    // Verificación automática
+let verificationAttempts = 0;
+let verificationTimer = null;
+
+function startAutoVerification() {
+    verificationAttempts = 0;
+    verificationTimer = setInterval(() => {
+        if (currentFaceMesh) {
+            verifyFace();
+        } else {
+            verificationAttempts++;
+            if (verificationAttempts >= 15) { // 2 segundos 
+                const errorSound = document.getElementById('errorSound');
+         
+         
+                errorSound.play();
+                messageDiv.textContent = "No se detectó el rostro. Por favor, posiciónese frente a la cámara.";
+                messageDiv.style.display = 'block';
+            }
         }
+    }, 100);
+}
+
+function verifyFace() {
+    if (!currentFaceMesh) return;
+
+    const username = document.getElementById('username').value;
+    const meshData = Array.from(currentFaceMesh).map(point => ({
+        x: point.x,
+        y: point.y,
+        z: point.z
+    }));
+
+    fetch('{{ url_for("facial_verification") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            username: username,
+            captured_mesh: JSON.stringify(meshData)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            clearInterval(verificationTimer);
+            messageDiv.textContent = "Verificación exitosa. Redirigiendo...";
+            messageDiv.style.display = 'block';
+            setTimeout(() => {
+                window.location.href = data.redirect;
+            }, 1000);
+        } else {
+            const errorSound = document.getElementById('errorSound');
+            errorSound.play();
+            messageDiv.textContent = "Verificación facial fallida. Por favor, intente de nuevo.";
+            messageDiv.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        clearInterval(verificationTimer);
+        messageDiv.textContent = 'Error de conexión. Por favor, intente más tarde.';
+        messageDiv.style.display = 'block';
+        const errorSound = document.getElementById('errorSound');
+        errorSound.play();
+    });
+}
 
         function onResults(results) {
             canvasCtx.save();
@@ -154,45 +269,7 @@
             canvasCtx.restore();
         }
 
-        captureButton.addEventListener('click', () => {
-            if (!currentFaceMesh) {
-                messageDiv.textContent = "No se detectó una cara. Por favor, asegúrese de que su cara esté visible en la cámara.";
-                return;
-            }
-
-            const username = document.getElementById('username').value;
-            const meshData = Array.from(currentFaceMesh).map(point => ({
-                x: point.x,
-                y: point.y,
-                z: point.z
-            }));
-
-            fetch('{{ url_for("facial_verification") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: username,
-                    captured_mesh: JSON.stringify(meshData)
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    messageDiv.textContent = "Verificación exitosa. Redirigiendo...";
-                    setTimeout(() => {
-                        window.location.href = data.redirect;
-                    }, 2000);
-                } else {
-                    messageDiv.textContent = "Verificación facial fallida. Por favor, intente de nuevo.";
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                messageDiv.textContent = 'Error de conexión. Por favor, intente más tarde.';
-            });
-        });
+        
     </script>
 </body>
 </html>

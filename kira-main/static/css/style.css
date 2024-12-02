@@ -94,14 +94,113 @@ body {
     color: #ccc;
 }
 
-/* Estilo para el área de contenido */
+
+
+.action-buttons button {
+    background-color: rgba(4, 101, 116, 0.7);
+    border: 2px solid rgba(4, 101, 116, 0.7);
+    color: #ffffff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.action-buttons button:hover {
+    background-color: rgba(129, 219, 233, 0.7);
+    color: #ffffff;
+    transform: scale(1.05);
+}
+
+/* Nuevos estilos para la tabla de usuarios */
+
 .content-area {
-    flex: 1;
-    padding: 30px;
-    background-color: rgba(255, 255, 255, 0.1); /* Fondo claro con opacidad */
-    border-radius: 10px; /* Bordes redondeados */
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); /* Sombra suave */
-    backdrop-filter: blur(5px); /* Efecto de desenfoque */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    /* Asegura que el contenedor tenga altura completa */
+}
+
+.content-area table {
+    width: 80%;
+    margin-right: 5px;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.content-area thead {
+    background-color: rgba(4, 101, 116, 0.7);
+    /* Color similar al degradado de la barra lateral */
+}
+
+.content-area th {
+    padding: 15px;
+    text-align: left;
+    color: #ffffff;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.content-area tbody tr {
+    transition: background-color 0.3s ease;
+}
+
+.content-area tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.content-area tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.content-area td {
+    padding: 15px;
+    color: #ffffff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.content-area td button {
+    margin-right: 10px;
+    background-color: transparent;
+    border: 2px solid #ffffff;
+    color: #ffffff;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.content-area td button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+.content-area td button:first-child {
+    border-color: #4CAF50;
+    /* Verde para editar */
+    color: #4CAF50;
+}
+
+.content-area td button:last-child {
+    border-color: #F44336;
+    /* Rojo para eliminar */
+    color: #F44336;
+}
+
+.content-area td button:first-child:hover {
+    background-color: rgba(76, 175, 80, 0.2);
+}
+
+.content-area td button:last-child:hover {
+    background-color: rgba(244, 67, 54, 0.2);
 }
 
 /* Estilo para formularios */
@@ -141,7 +240,8 @@ button[type="button"] {
 
 button[type="submit"]:hover,
 button[type="button"]:hover {
-    background-color: #e0e0e0; /* Color claro al pasar el mouse */
+    background-color: #e0e0e0;
+    /* Color claro al pasar el mouse */
 }
 
 /* Estilo para el área de captura de imagen */

@@ -81,7 +81,7 @@
                     <input type="password" id="password" name="password" required>
                 </div>
                 <div class="options">
-                    <a href="#" class="forgot-password">Olvidé mi contraseña</a>
+                    <a href="{{ url_for('recover_account') }}" class="forgot-password">Olvidé mi contraseña</a>
                 </div>
                 <button type="button" onclick="startFaceVerification()">Iniciar Sesión</button>
                 <!-- <button id="capture" style="margin-top: 20px;">Verificar Identidad</button>-->

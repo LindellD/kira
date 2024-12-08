@@ -3,7 +3,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, current_user, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import base64
-import face_recognition
 import numpy as np
 import cv2
 import logging
@@ -15,8 +14,9 @@ import uuid
 from twilio.rest import Client
 from datetime import datetime, timedelta
 import random
+import secrets
 import pytz
-
+import face_recognition
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mssql+pyodbc://lindell2_SQLLogin_2:ztg92qokn7@Usuarios1.mssql.somee.com/Usuarios1?driver=ODBC+Driver+17+for+SQL+Server'
@@ -35,15 +35,21 @@ class User(UserMixin, db.Model):
     permissions = db.Column(db.String(200), nullable=True)
     profile_image = db.Column(db.String(255), nullable=True)
     phone_number = db.Column(db.String(15), nullable=True)
+    num_preg = db.Column(db.Integer, nullable=True)
+    respuesta = db.Column(db.String(255), nullable=True)
     verification_code = db.Column(db.String(6), nullable=True)
     code_expiry = db.Column(db.DateTime, nullable=True)
 
-    def __init__(self, username, password, role, permissions=None, profile_image=None):
+    def __init__(self, username, password, role, phone_number=None, num_preg=None, 
+                 respuesta=None, permissions=None, profile_image=None):
         self.username = username
         self.password = password
         self.role = role
+        self.phone_number = phone_number
+        self.num_preg = num_preg
+        self.respuesta = respuesta
         self.permissions = permissions
-        self.profile_image = profile_image 
+        self.profile_image = profile_image
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -155,24 +161,21 @@ def index():
 
 
 @app.route('/create_user', methods=['GET', 'POST'])
-@login_required
-@admin_required
 def create_user():
     if request.method == 'POST':
         try:
-            # Validación de datos básicos
             username = request.form.get('username', '').strip()
             password = request.form.get('password', '')
-            role = request.form.get('role', '')
-            permissions = request.form.getlist('permissions')
+            phone_number = request.form.get('phone', '')
+            num_preg = request.form.get('num_preg')
+            respuesta = request.form.get('respuesta', '').strip()
             mesh_points = request.form.get('profile_image')
 
             # Validaciones
-            if not username or not password or not role:
+            if not all([username, password, phone_number, num_preg, respuesta]):
                 flash('Todos los campos son requeridos.')
                 return redirect(url_for('create_user'))
 
-            # Verificar usuario existente
             if User.query.filter_by(username=username).first():
                 flash('El nombre de usuario ya está en uso.')
                 return redirect(url_for('create_user'))
@@ -180,33 +183,22 @@ def create_user():
             # Generar hash de contraseña
             hashed_password = generate_password_hash(password)
             
-            # Inicializar variable para la ruta del archivo
+            # Procesar malla facial
             mesh_file_db_path = None
-
-            # Procesar malla facial si existe
             if mesh_points:
                 try:
-                    # Validar JSON
                     mesh_dict = json.loads(mesh_points)
-                    
-                    # Crear directorio si no existe
                     faces_dir = os.path.join(app.root_path, 'static', 'faces')
                     os.makedirs(faces_dir, exist_ok=True)
-                    
-                    # Generar nombre de archivo único
                     mesh_filename = f"{uuid.uuid4().hex}_{username}.json"
                     mesh_file_relative_path = os.path.join('static', 'faces', mesh_filename)
                     mesh_file_path = os.path.join(app.root_path, mesh_file_relative_path)
                     
-                    # Guardar archivo JSON
                     with open(mesh_file_path, 'w', encoding='utf-8') as mesh_file:
                         json.dump(mesh_dict, mesh_file, ensure_ascii=False, indent=4)
                     
                     mesh_file_db_path = mesh_file_relative_path.replace(os.sep, '/')
                     
-                except json.JSONDecodeError:
-                    flash('Error: La malla facial no es un JSON válido.')
-                    return redirect(url_for('create_user'))
                 except Exception as e:
                     flash(f'Error al procesar la malla facial: {str(e)}')
                     return redirect(url_for('create_user'))
@@ -216,8 +208,10 @@ def create_user():
                 new_user = User(
                     username=username,
                     password=hashed_password,
-                    role=role,
-                    permissions=','.join(permissions) if permissions else '',
+                    role='user',  # Role por defecto
+                    phone_number=phone_number,
+                    num_preg=num_preg,
+                    respuesta=respuesta,
                     profile_image=mesh_file_db_path
                 )
                 
@@ -225,11 +219,10 @@ def create_user():
                 db.session.commit()
                 
                 flash('Usuario creado correctamente.')
-                return redirect(url_for('index'))
+                return redirect(url_for('login'))
                 
             except Exception as e:
                 db.session.rollback()
-                # Si hay error y se creó un archivo, intentar eliminarlo
                 if mesh_file_db_path and os.path.exists(mesh_file_path):
                     try:
                         os.remove(mesh_file_path)
@@ -323,7 +316,7 @@ def update_profile():
 def login():
     if request.method == 'GET':
         if current_user.is_authenticated:
-            return redirect(url_for('index'))
+            return redirect(url_for('user_inicio'))
         return render_template('login.html')
 
     elif request.method == 'POST':
@@ -364,7 +357,7 @@ def login():
 
 # Configuración de Twilio
 TWILIO_ACCOUNT_SID = 'ACac0e9cca0354e194ec3c4666573e5ad9' #no me eja subir mis credenciales asi q falta rellenar
-TWILIO_AUTH_TOKEN = '995a3d8b3402e058c84b773d006dcd68' #igual aqui
+TWILIO_AUTH_TOKEN = 'a4dde422e807a068cc3c6b8f1f078f38' #igual aqui
 #TWILIO_WHATSAPP_NUMBER = '+14155238886'  # Formato: 'whatsapp:+14155238886'
 TWILIO_WHATSAPP_NUMBER = '+14155238886'  # Formato: 'whatsapp:+14155238886'
 
@@ -481,7 +474,7 @@ def admin_login():
         })
     
 # Definición del umbral de similitud
-SIMILARITY_THRESHOLD = 0.948
+SIMILARITY_THRESHOLD = 0.97
 
 # Definición del modelo VerificationLog (si es necesario)
 class VerificationLog(db.Model):
@@ -650,7 +643,7 @@ def facial_verification():
                 return jsonify({
                     'success': True,
                     'message': 'Verificación facial exitosa.',
-                    'redirect': url_for('index')
+                    'redirect': url_for('user_inicio')
                 })
             else:
                 return jsonify({
@@ -664,7 +657,118 @@ def facial_verification():
                 'success': False,
                 'message': 'Error en la verificación. Por favor, intente de nuevo.'
             })
+        
+@app.route('/user_inicio')
+@login_required  # Asegura que solo usuarios autenticados puedan acceder
+def user_inicio():
+    # Datos para el carrusel
+    slides = [
+        {
+            "title": "KIRAFACE",
+            "description": "Autenticación biométrica rápida y segura que usa reconocimiento facial y detección de parpadeo para garantizar acceso sin contacto con precisión y rapidez en tiempo real.",
+            "image": "images/car1.jpeg"
+        },
+        {
+            "title": "Seguridad Avanzada",
+            "description": "Sistema de seguridad biométrico de última generación",
+            "image": "images/car2.jpeg"
+        },
+        {
+            "title": "Acceso Sin Contacto",
+            "description": "Tecnología moderna para control de acceso",
+            "image": "images/car3.jpeg"
+        },
+        {
+            "title": "Biometria",
+            "description": "Seguridad biometrica que garantiza presicion y rapidez",
+            "image": "images/car4.jpeg"
+        }
+    ]
+    
+    # Renderiza la plantilla con los datos del carrusel
+    return render_template('user_inicio.html', slides=slides)
 
+@app.route('/recover_account', methods=['GET', 'POST'])
+def recover_account():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        phone_number = request.form.get('phone_number')
+        respuesta = request.form.get('respuesta')
+        
+        user = User.query.filter_by(username=username).first()
+        
+        if not user:
+            flash('Usuario no encontrado')
+            return redirect(url_for('recover_account'))
+        
+        if user.phone_number != phone_number:
+            flash('Número de teléfono incorrecto')
+            return redirect(url_for('recover_account'))
+        
+        if user.respuesta.lower() != respuesta.lower():
+            flash('Respuesta de seguridad incorrecta')
+            return redirect(url_for('recover_account'))
+        
+        # Si todas las validaciones son correctas, generar token
+        token = generate_reset_token(username)
+        session['reset_token'] = token
+        session['reset_username'] = username
+        return redirect(url_for('reset_password', token=token))
+            
+    return render_template('recover_account.html')
+
+@app.route('/get_security_question/<username>')
+def get_security_question(username):
+    user = User.query.filter_by(username=username).first()
+    if user:
+        questions = {
+            1: "¿Cuál es el nombre de tu primera mascota?",
+            2: "¿En qué ciudad naciste?",
+            3: "¿Cuál es el nombre de tu madre?",
+            4: "¿Cuál fue tu primer colegio?",
+            5: "¿Cuál es tu comida favorita?"
+        }
+        return jsonify({
+            'question': questions.get(user.num_preg, "Pregunta no encontrada")
+        })
+    return jsonify({'question': None})
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if 'reset_token' not in session or session['reset_token'] != token:
+        flash('Sesión inválida o expirada')
+        return redirect(url_for('recover_account'))
+        
+    if request.method == 'POST':
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if new_password != confirm_password:
+            flash('Las contraseñas no coinciden')
+            return redirect(url_for('reset_password', token=token))
+            
+        username = session.get('reset_username')
+        user = User.query.filter_by(username=username).first()
+        
+        if user:
+            user.password = generate_password_hash(new_password)
+            db.session.commit()
+            session.pop('reset_token', None)
+            session.pop('reset_username', None)
+            flash('Contraseña actualizada correctamente')
+            return redirect(url_for('login'))
+        
+    return render_template('reset_password.html')
+
+def generate_reset_token(username):
+    # Genera un token único para resetear la contraseña
+    return secrets.token_urlsafe(32)
+
+def verify_reset_token(token):
+    # Verifica el token y retorna el username asociado
+    if 'reset_token' in session and session['reset_token'] == token:
+        return session.get('reset_username')
+    return None
 
 @app.route('/logout')
 @login_required

@@ -68,6 +68,35 @@
             z-index: 2;
             white-space: nowrap;
         }
+        .form-group select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        font-size: 14px;
+    }
+
+    .form-group input[type="tel"] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .form-group input[type="tel"]:invalid {
+        border-color: #ff3333;
+    }
+
+    .form-group input[type="tel"]:valid {
+        border-color: #33cc33;
+    }
+    /* Estilo para el placeholder del teléfono */
+    .form-group input[type="tel"]::placeholder {
+        color: #999;
+        font-size: 12px;
+    }
     </style>
 </head>
 
@@ -94,30 +123,41 @@
             <h2>Crear Usuario</h2>
             <form action="{{ url_for('create_user') }}" method="POST" enctype="multipart/form-data">
                 <div class="form-group">
-                        <label for="username">Nombre de Usuario:</label>
-                        <input type="text" id="username" name="username" required><br><br>
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Contraseña:</label>
-                        <input type="password" id="password" name="password" required><br><br>
-                    </div>
-                    <div class="form-group">
-                        <label for="role">Rol:</label>
-                        <select id="role" name="role" required>
-                            <option value="admin">Administrador</option>
-                            <option value="coadmin">Coadministrador</option>
-                            <option value="user">Usuario</option>
-                        </select><br><br>
+                    <label for="username">Nombre de Usuario:</label>
+                    <input type="text" id="username" name="username" required>
                 </div>
+
                 <div class="form-group">
-                    <label>Permisos Adicionales:</label><br>
-                    <input type="checkbox" id="permiso1" name="permissions" value="ver_alarmas">
-                    <label for="permiso1">Ver Alarmas</label><br>
-                    <input type="checkbox" id="permiso2" name="permissions" value="modificar_notificaciones">
-                    <label for="permiso2">Modificar Notificaciones</label><br>
-                    <input type="checkbox" id="permiso3" name="permissions" value="configuracion_avanzada">
-                    <label for="permiso3">Acceso a Configuración Avanzada</label><br><br>
+                    <label for="password">Contraseña:</label>
+                    <input type="password" id="password" name="password" required>
                 </div>
+
+                <div class="form-group">
+                    <label for="phone">Número de Celular:</label>
+                    <input type="tel" id="phone" name="phone" 
+                           pattern="[0-9]{9}" 
+                           placeholder="Ejemplo: 987654321" 
+                           required>
+                </div>
+
+                <div class="form-group">
+                    <label for="security_question">Pregunta de Seguridad:</label>
+                    <select id="security_question" name="num_preg" required>
+                        <option value="">Seleccione una pregunta</option>
+                        <option value="1">¿Cuál es el nombre de tu primera mascota?</option>
+                        <option value="2">¿En qué ciudad naciste?</option>
+                        <option value="3">¿Cuál es el nombre de tu madre?</option>
+                        <option value="4">¿Cuál fue tu primer colegio?</option>
+                        <option value="5">¿Cuál es tu comida favorita?</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="security_answer">Respuesta:</label>
+                    <input type="text" id="security_answer" name="respuesta" 
+                    placeholder="Una sola palabra" required>
+                </div>
+
                 <div class="form-group">
                     <label for="face_capture">Captura tu imagen:</label>
                     <div class="face-recognition">
@@ -133,11 +173,13 @@
                     </div>
                     <input type="hidden" id="profile_image" name="profile_image">
                 </div>
+
                 <div class="form-group">
-                    <label>Imagen Capturada:</label><br>
+                    <label>Imagen Capturada:</label>
                     <img id="captured_image" src="" alt="Imagen Capturada"
                         style="display:none; width: 320px; height: 240px;">
                 </div>
+
                 <button type="submit">Crear Usuario</button>
             </form>
         </div>

@@ -9,15 +9,15 @@
 <body>
     <div class="sidebar">
         <div class="user-info">
-            <div class="user-avatar"></div>
+            <div class="user-avatar">
+                <img src="../static/images/admin2.png" alt="{{ current_user.username }}'s avatar" class="avatar-image">
+            </div>
             <h2 class="user-name">{{ current_user.username }}</h2>
         </div>
         <ul class="menu">
-            <li><a href="#">Inicio</a></li>
-            <li><a href="#">Configuración</a></li>
-            <li><a href="#">Alarmas</a></li>
-            <li><a href="#">Notificaciones</a></li>
-            <li><a href="{{ url_for('logout') }}">Cerrar Sesión</a></li>
+            <li><a href="#" >Inicio</a></li>
+            <li><a href="{{  url_for('view_login_history')  }}" class="menu-item">historial</a></li>
+            <li><a href="{{ url_for('logout') }}" class="menu-item">Cerrar Sesión</a></li>
         </ul>
     </div>
     <div class="main-content">
